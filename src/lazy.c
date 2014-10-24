@@ -19,6 +19,10 @@ void *memdup(const void *orig,size_t size) {
     return dup;
 }
 #endif
+
+extern Tcl_Obj *emptyList;
+Tcl_Interp *lazyLastResort=NULL;
+
 int
 lazyObjProc(ClientData cld,Tcl_Interp *interp,int objc,Tcl_Obj *const objv[])
 {
@@ -28,7 +32,17 @@ lazyObjProc(ClientData cld,Tcl_Interp *interp,int objc,Tcl_Obj *const objv[])
         Tcl_WrongNumArgs(interp,objc,objv,"?script?");
         return TCL_ERROR;
     }
-    result=lazyObjNew(interp,objc-1,objv+1);
+      if (objc==2) {
+        Tcl_Obj *list_objv[3];
+        int list_objc;
+        list_objv[0]=Tcl_NewStringObj("eval",-1);
+        Tcl_IncrRefCount(list_objv[0]);
+        list_objv[1]=objv[1];
+        result=lazyObjNew(interp,2,list_objv);
+        Tcl_DecrRefCount(list_objv[0]);
+    } else {
+        result=lazyObjNew(interp,objc-1,objv+1);
+    }
     if (result==NULL)
         return TCL_ERROR;
     Tcl_SetObjResult(interp,result);
@@ -64,11 +78,25 @@ lazyExec(Tcl_Interp *interp,Tcl_Obj *obj)
     }
 
     lazy=LAZY(obj);
-    if (interp==NULL) interp=lazy->interp;
+    if (interp==NULL) {
+        //TRACE("lazy interp=%p",interp);
+        if (!Tcl_InterpDeleted(lazy->interp))
+            interp=lazy->interp;
+        else if (lazyLastResort!=NULL)
+            interp=lazyLastResort;
+        else {
+            ERR("No has interp for execute lazy");
+            Tcl_DecrRefCount(lazy->command);
+            obj->bytes=Tcl_Alloc(1);
+            obj->bytes[0]=0;
+            obj->length=1;
+            obj->typePtr=NULL;
+            return TCL_OK;
+        }
+    }
     
     save=Tcl_SaveInterpState(interp,0);
     do {
-        //TRACE("execute");
         code=Tcl_EvalObjEx(interp,lazy->command,0);
         result=Tcl_GetObjResult(interp);
         Tcl_DecrRefCount(lazy->command);
@@ -81,10 +109,8 @@ lazyExec(Tcl_Interp *interp,Tcl_Obj *obj)
                 tupleObjInit(result,NULL,NULL);
             } else if (result->typePtr!=NULL && result->typePtr->dupIntRepProc!=NULL) {
                 result->typePtr->dupIntRepProc(result,obj);
-                obj->typePtr=result->typePtr;
             } else {
                 obj->bytes=Tcl_GetStringFromObj(result,&obj->length);
-                obj->typePtr=NULL;
                 if (Tcl_IsShared(result)) {
                     obj->bytes=memdup(obj->bytes,obj->length+1);
                 } else {
@@ -92,8 +118,14 @@ lazyExec(Tcl_Interp *interp,Tcl_Obj *obj)
                     result->length=0;
                 }
             }
+            obj->typePtr=result->typePtr;
         } else {
             //inspect(result);
+            ERR("IN LAZY EXEC");
+            obj->typePtr=NULL;
+            obj->bytes=Tcl_Alloc(1);
+            obj->bytes[0]=0;
+            obj->length=1;
             obj->typePtr=NULL;
             break;
         }
@@ -134,8 +166,20 @@ Tcl_ObjType const lazyTypeD = {
 };
 const Tcl_ObjType *lazyType=&lazyTypeD;
 
+static void onInterpDelete(ClientData data,Tcl_Interp *interp) {
+    ERR("Interp delete - create last-resort for lazy");
+    (void)data;
+    (void)interp;
+    if (lazyLastResort==NULL) {
+        lazyLastResort=Tcl_CreateInterp();
+        Tcl_Eval(lazyLastResort,"package require f");
+        Tcl_Eval(lazyLastResort,"namespace import ::f::*");
+    }
+}
+
 int registerLazySubsys(Tcl_Interp *interp) {
     (void)interp;
     Tcl_RegisterObjType(lazyType);
+    Tcl_CallWhenDeleted(interp, onInterpDelete,NULL);
     return TCL_OK;
 }

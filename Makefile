@@ -38,7 +38,7 @@ $(TARGET).$(DLLSO): $(OBJS)
 dist: $(TARGET).$(DLLSO)
 		cp -f $(TARGET).$(DLLSO) $(DISTDIR)
 
-.PHONY: clean distclean touch
+.PHONY: clean distclean touch test
 
 clean:
 		$(RM) *.o
@@ -53,7 +53,5 @@ touch:
 		touch -c *.c
 		touch -c *.h
 
-
-
-
-
+test:
+		cd test;tclsh all.tcl

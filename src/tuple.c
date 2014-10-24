@@ -25,7 +25,10 @@ void consExpand(Cons *cons);
 
 int initTupleSubsys(Tcl_Interp *interp) {
     (void)interp;
-    if (tupleType!=NULL) return TCL_ERROR;
+    if (tupleType!=NULL) {
+        WARN("tupleType!=NULL, may be a slave interp?");
+        return TCL_OK;
+    }
     tupleType=&tupleTypeD;
     emptyTuple=tupleObjNew();
     if (emptyTuple==NULL) return TCL_ERROR;

@@ -231,7 +231,6 @@ resolveTypes(Tcl_Interp *interp) {
 	dictType=dict->typePtr;
 	return TCL_OK;
 }
-
 int
 Tclf_Init(Tcl_Interp *interp)
 {	// Инициализация библиотеки
@@ -247,22 +246,29 @@ Tclf_Init(Tcl_Interp *interp)
 		return TCL_ERROR;
 	}
 	if (initTupleSubsys(interp)!=TCL_OK) {
+		ERR("on Tuple init");
 		return TCL_ERROR;
 	}
 	if (resolveTypes(interp)!=TCL_OK) {
+		ERR("resolve types");
 		return TCL_ERROR;
 	}
 	if (installConsts(interp,constTable)!=TCL_OK) {
+		ERR("install consts");
 		return TCL_ERROR;
 	}
 	if (resolveCommands(interp,resolveTable)!=TCL_OK) {
+		ERR("resolve commands");
 		return TCL_ERROR;
 	}
 	// Инсталляция (регистрация) команд
 	if (installCommands(interp,installTable)!=TCL_OK) {
+		ERR("install commands");
 		return TCL_ERROR;
 	}
-	
-	fprintf(stdout,"Library  load sucesful for %s\n",version);
 	return TCL_OK;
+}
+int
+F_Init(Tcl_Interp *interp) {
+	return Tclf_Init(interp);
 }
