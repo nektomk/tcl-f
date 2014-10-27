@@ -46,7 +46,7 @@ inspectObj(int indent,Tcl_Obj *obj)
 		if (obj->typePtr==lazyType) {
 			inspectLazyObj(indent,5,obj);
 		}
-	}
+	} else printf("(untyped) ");
 	if (obj->bytes!=NULL && obj->length!=0) {
 		printf("= %*s",obj->length,obj->bytes);
 	}

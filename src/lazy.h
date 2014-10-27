@@ -12,7 +12,7 @@ typedef struct Lazy {
 
 #define LAZY(obj) ((Lazy *)&((obj)->internalRep))
 
-int InitLazySubsys(Tcl_Interp *);
+int initLazySubsys(Tcl_Interp *);
 
 extern const Tcl_ObjType *lazyType;
 

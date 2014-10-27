@@ -2,6 +2,7 @@
 #include "tclf.h"
 #include "tuple.h"
 #include "lazy.h"
+#include "func.h"
 #include "inspect.h"
 
 #define NS "::f::"
@@ -29,6 +30,7 @@ const Tcl_ObjType
 	*wideType,
 	// специальные типы
 	*lambdaExprType,
+	*cmdNameType,
 	// собственные типы
 	*tupleType
 	;
@@ -209,6 +211,7 @@ resolveTypes(Tcl_Interp *interp) {
 		INSPECT_ARRAY(-1,3,objv,"command");
 		return TCL_ERROR;
 	}
+	cmdNameType=objv[0]->typePtr;
 	lambdaExprType=objv[1]->typePtr;
 	// определение типа List
 	
@@ -231,6 +234,7 @@ resolveTypes(Tcl_Interp *interp) {
 	dictType=dict->typePtr;
 	return TCL_OK;
 }
+static int nrOfInstances=0;
 int
 Tclf_Init(Tcl_Interp *interp)
 {	// Инициализация библиотеки
@@ -245,27 +249,41 @@ Tclf_Init(Tcl_Interp *interp)
 		ERR("in Tcl_CreateNamespace");
 		return TCL_ERROR;
 	}
-	if (initTupleSubsys(interp)!=TCL_OK) {
-		ERR("on Tuple init");
-		return TCL_ERROR;
+	// создание типов, объектов и констант делается раз и навсегда
+	if (nrOfInstances==0) {
+		if (initTupleSubsys(interp)!=TCL_OK) {
+			ERR("on Tuple init");
+			return TCL_ERROR;
+		}
+		if (initFuncSubsys(interp)!=TCL_OK) {
+			ERR("on Func init");
+			return TCL_ERROR;
+		}
+		if (initLazySubsys(interp)!=TCL_OK) {
+			ERR("on Lazy init");
+			return TCL_ERROR;
+		}
+		nrOfInstances++;
+		if (resolveTypes(interp)!=TCL_OK) {
+			ERR("resolve types");
+			return TCL_ERROR;
+		}
+		if (installConsts(interp,constTable)!=TCL_OK) {
+			ERR("install consts");
+			return TCL_ERROR;
+		}
 	}
-	if (resolveTypes(interp)!=TCL_OK) {
-		ERR("resolve types");
-		return TCL_ERROR;
-	}
-	if (installConsts(interp,constTable)!=TCL_OK) {
-		ERR("install consts");
-		return TCL_ERROR;
-	}
+	// а вот команды разные у каждого интерпретатора
 	if (resolveCommands(interp,resolveTable)!=TCL_OK) {
 		ERR("resolve commands");
 		return TCL_ERROR;
 	}
-	// Инсталляция (регистрация) команд
 	if (installCommands(interp,installTable)!=TCL_OK) {
 		ERR("install commands");
 		return TCL_ERROR;
 	}
+	if (initFuncInstance(interp,packageNamespace)!=TCL_OK)
+		return TCL_ERROR;
 	return TCL_OK;
 }
 int

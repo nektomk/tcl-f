@@ -30,13 +30,21 @@ int initTupleSubsys(Tcl_Interp *interp) {
         return TCL_OK;
     }
     tupleType=&tupleTypeD;
+    Tcl_RegisterObjType(tupleType);
     emptyTuple=tupleObjNew();
     if (emptyTuple==NULL) return TCL_ERROR;
     Tcl_IncrRefCount(emptyTuple);
     Tcl_IncrRefCount(emptyTuple);
     return TCL_OK;
 }
-
+int initTupleInstance(Tcl_Interp *interp,char *nsPrefix) {
+    char name[255];
+    // proc tuple
+    snprintf(name,255,"%s%s",nsPrefix,"tuple");
+    if (Tcl_CreateObjCommand(interp,name,tupleObjProc,NULL,NULL)!=TCL_OK)
+        return TCL_ERROR;
+    return TCL_OK;
+}
 static void
 tupleObjFreeInternals(Tcl_Obj *tupleObj)
 {

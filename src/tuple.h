@@ -15,6 +15,7 @@ typedef struct Tuple {
 } Tuple;
 
 int initTupleSubsys(Tcl_Interp *interp);
+int initTupleInstance(Tcl_Interp *interp,char *nsPrefix);
 
 /** "Tuple" stores in Tcl_Obj directly */
 #define TUPLE(obj) ((Tuple *)&obj->internalRep.twoPtrValue)

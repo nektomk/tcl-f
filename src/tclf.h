@@ -33,6 +33,7 @@ extern const Tcl_ObjType
 	*wideType,
 	// специальные типы
 	*lambdaExprType,
+        *cmdNameType,
         // собственные типы
         *tupleType
 	;
