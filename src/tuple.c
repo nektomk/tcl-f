@@ -216,3 +216,12 @@ consExpand(Cons *cons) {
         cons->next=head;
     }
 }
+Cons *consHead(Cons *cons) {
+    for(;cons!=NULL;cons=cons->next) {
+        if (cons->obj==NULL) continue;
+        if (cons->obj->typePtr!=tupleType) return cons;
+        consExpand(cons);
+    }
+    return cons;
+}
+

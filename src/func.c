@@ -1,7 +1,10 @@
 #include <tcl.h>
 #include <string.h>
 
+#include "iter.h"
 #include "func.h"
+#include "call.h"
+#include "chain.h"
 
 #include "debug.h"
 #include "inspect.h"
@@ -215,6 +218,40 @@ funcSetLambda(Tcl_Interp *interp,Func *func,Tcl_Obj *lambda) {
     return TCL_OK;
 }
 int
+funcObjSetFromOther(Tcl_Interp *interp,Tcl_Obj *funcObj,Tcl_Namespace *ns,Tcl_Obj *otherFuncObj,int objc,Tcl_Obj *const objv[])
+{
+    Func *func;
+    Func *other;
+
+    if (funcObjClear(funcObj)!=TCL_OK) return TCL_ERROR;
+
+    func=FUNC(funcObj);
+    other=FUNC(otherFuncObj);
+    
+    if (ns!=NULL && other->ns!=NULL && ns!=other->ns) {
+        Tcl_SetResult(interp,"namespace conflict in function decl",NULL);
+        return TCL_ERROR;
+    }
+    if (other->formal!=NULL) { func->formal=other->formal; Tcl_IncrRefCount(func->formal); }
+    if (other->body!=NULL) { func->body=other->body ; Tcl_IncrRefCount(func->body); }
+    func->cmd=other->cmd;
+    if (other->cmdName!=NULL) { func->cmdName=other->cmdName; Tcl_IncrRefCount(func->cmdName); }
+    memcpy(&func->cmdInfo,&other->cmdInfo,sizeof(Tcl_CmdInfo));
+    func->ns=other->ns;
+    if (other->curry!=NULL) { func->curry=other->curry ; Tcl_IncrRefCount(func->curry); }
+    if (other->lambda!=NULL) { func->lambda=other->lambda; Tcl_IncrRefCount(func->lambda); }
+    if (other->cmdLine!=NULL) {
+        func->cmdLine=Tcl_DuplicateObj(other->cmdLine);
+    } else {
+        func->cmdLine=Tcl_NewListObj(0,NULL);
+    }
+    Tcl_IncrRefCount(func->cmdLine);
+    Tcl_ListObjLength(interp,func->cmdLine,&func->cmdLineLen);
+    Tcl_ListObjReplace(interp,func->cmdLine,func->cmdLineLen,0,objc,objv);
+    func->cmdLineLen+=objc;
+    return TCL_OK;
+}
+int
 funcObjSetFromArgs(Tcl_Interp *interp,Tcl_Obj *funcObj,int objc,Tcl_Obj *const objv[])
 {
     Func *func;
@@ -224,6 +261,7 @@ funcObjSetFromArgs(Tcl_Interp *interp,Tcl_Obj *funcObj,int objc,Tcl_Obj *const o
     if (funcObjClear(funcObj)!=TCL_OK) return TCL_ERROR;
     func=FUNC(funcObj);
 FIRSTARG:    
+    if (objv[0]->typePtr==funcType) return funcObjSetFromOther(interp,funcObj,func->ns,objv[0],objc-1,objv+1);
     if (Tcl_ListObjLength(interp,objv[0],&length)!=TCL_OK ) goto ERROR;
     if (length==1) {
         int firstArgLen;
@@ -318,6 +356,7 @@ Tcl_Obj *funcObjFromArgs(Tcl_Interp *interp,int objc,Tcl_Obj *const objv[]) {
     funcObjSetFromArgs(interp,funcObj,objc,objv);
     return funcObj;
 }
+// ::f::func procedure
 int funcObjProc(ClientData data,Tcl_Interp *interp,int objc,Tcl_Obj *const objv[]) {
     Tcl_Obj *funcObj;
     int code;
@@ -337,80 +376,6 @@ int funcObjProc(ClientData data,Tcl_Interp *interp,int objc,Tcl_Obj *const objv[
     Tcl_SetObjResult(interp,funcObj);
     return code;
 }
-int funcObjCall(Tcl_Interp *interp,Tcl_Obj *funcObj,int objc,Tcl_Obj *const objv[])
-{
-    Func *func;
-    int code;
-    func=FUNC(funcObj);
-    Tcl_ListObjReplace(interp,func->cmdLine,func->cmdLineLen,0,objc,objv);
-    if (func->cmd!=NULL && func->cmdInfo.objProc!=NULL) {
-        Tcl_Obj **cmd_objv;
-        int cmd_objc;
-        Tcl_ListObjGetElements(interp,func->cmdLine,&cmd_objc,&cmd_objv);
-        code=func->cmdInfo.objProc(func->cmdInfo.objClientData,interp,cmd_objc,cmd_objv);
-    } else
-        code=Tcl_EvalObjEx(interp,func->cmdLine,0);
-    Tcl_ListObjReplace(interp,func->cmdLine,func->cmdLineLen,objc,0,NULL);
-    return code;
-}
-int funcObjChain(Tcl_Interp *interp,Tcl_Obj *funcObjList,int objc,Tcl_Obj *const objv[])
-{
-    Tcl_Obj *result;
-    Tcl_Obj **funcObj;
-    int count;
-    int t;
-    int code;
-    if (funcObjList->typePtr==funcType)
-        return funcObjCall(interp,funcObjList,objc,objv);
-    if (Tcl_ListObjGetElements(interp,funcObjList,&count,&funcObj)!=TCL_OK)
-        return TCL_ERROR;
-    if (count==0) {
-        Tcl_SetObjResult(interp,Tcl_NewListObj(0,NULL));
-        return TCL_OK;
-    }
-    // вызвать первую функцию с переносом аргументов
-    if ((code=funcObjCall(interp,funcObj[0],objc,objv))!=TCL_OK && code!=TCL_RETURN)
-        return code;
-    for(t=1;t<count;t++) {
-        result=Tcl_GetObjResult(interp);
-        Tcl_IncrRefCount(result);
-        code=funcObjCall(interp,funcObj[t],1,&result);
-        Tcl_DecrRefCount(result);
-        if (code!=TCL_OK && code!=TCL_RETURN)
-            break;
-    }
-    return code;
-}
-
-int
-callFuncObjProc(ClientData data,Tcl_Interp *interp,int objc,Tcl_Obj *const*objv) {
-    int code;
-    Tcl_Obj *funcObj;
-    (void)data;
-    if (objc<2) {
-        Tcl_WrongNumArgs(interp,objc,objv,"function ?args..?");
-        return TCL_ERROR;
-    }
-    if (objv[1]->typePtr==funcType) {
-        return funcObjCall(interp,objv[1],objc-2,objv+2);
-    } else if ((funcObj=funcObjFromArgs(interp,objc-1,objv+1))!=NULL) {
-        Tcl_IncrRefCount(funcObj);
-        code=funcObjCall(interp,funcObj,0,NULL);
-        Tcl_DecrRefCount(funcObj);
-    } else {
-        code=Tcl_EvalObjv(interp,objc-1,objv+1,0);
-    }
-    return code;
-}
-int
-chainFuncObjProc(ClientData data,Tcl_Interp *interp,int objc,Tcl_Obj *const*objv) {
-    (void)data;
-    if (objc<2) {
-        Tcl_WrongNumArgs(interp,objc,objv,"function ?args..?");
-        return TCL_ERROR;
-    }
-    return funcObjChain(interp,objv[1],objc-2,objv+2);
-}
 
 int initFuncSubsys(Tcl_Interp *interp) {
     (void)interp;
@@ -428,15 +393,16 @@ int initFuncInstance(Tcl_Interp *interp,Tcl_Namespace *ns) {
     Tcl_Export(interp,ns,"func",0);
     
     snprintf(name,255,"%s::%s",ns->fullName,"call");
-    if (Tcl_CreateObjCommand(interp,name,callFuncObjProc,NULL,NULL)==NULL) {
-        ERR("unable to create command %s",name);
+    
+    if (Tcl_NRCreateCommand(interp,name,callObjProc,callNreProc,NULL,NULL)==NULL) {
+        ERR("unable to create NR command %s",name);
         return TCL_ERROR;
     }
     Tcl_Export(interp,ns,"call",0);
 
 
     snprintf(name,255,"%s::%s",ns->fullName,"chain");
-    if (Tcl_CreateObjCommand(interp,"chain",chainFuncObjProc,NULL,NULL)==NULL) {
+    if (Tcl_NRCreateCommand(interp,"chain",chainObjProc,chainNreProc,NULL,NULL)==NULL) {
         ERR("unable to create command %s",name);
         return TCL_ERROR;
     }

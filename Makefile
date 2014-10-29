@@ -1,4 +1,4 @@
-OBJS=tclf.o map.o inspect.o tuple.o cons.o lazy.o func.o
+OBJS=tclf.o map.o inspect.o tuple.o cons.o lazy.o iter.o func.o call.o chain.o
 TARGET=tclf
 DISTDIR=./f
 
@@ -40,7 +40,7 @@ func.dll: func.o
 dist: $(TARGET).$(DLLSO)
 		cp -f $(TARGET).$(DLLSO) $(DISTDIR)
 
-.PHONY: clean distclean touch test test-func test-lazy test-tuple test-call test-chain
+.PHONY: clean distclean touch test test-func test-lazy test-tuple test-call test-chain test-map
 
 clean:
 		$(RM) *.o
@@ -72,3 +72,7 @@ test-tuple:
 
 test-chain:
 		cd test;tclsh all.tcl -match chain-*
+
+test-map:
+		cd test;tclsh all.tcl -match map-*
+

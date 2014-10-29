@@ -49,7 +49,7 @@ Tcl_Obj *tupleRemoveNulls(Tcl_Obj *tupleObj);
 int tupleObjProc(ClientData,Tcl_Interp *,int,Tcl_Obj *const []);
 
 void consExpand(Cons *cons);
-
+Cons *consHead(Cons *cons); // TODO: allow/disallow expansion
 #endif
 
 

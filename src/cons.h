@@ -26,7 +26,7 @@ Cons *consFreeToPool(Cons *cons,Cons *pool);
 #endif
 
 Cons *consFromArray(int objc,Tcl_Obj *const objv[],Cons **saveTailPtr);
-
+Cons *consHead(Cons *cons); // вернуть первый непустой cons 
 /* free cons, variant:
     consFree(NULL,cons) - free single cons, return cons->next
     consFree(from,NULL) - free all cons list, return NULL
