@@ -2,7 +2,7 @@ OBJS=tclf.o map.o inspect.o tuple.o cons.o lazy.o iter.o func.o call.o chain.o
 TARGET=tclf
 DISTDIR=./f
 
-INCLUDE=-Iinclude
+#INCLUDE=-Isrc
 
 CFLAGS=$(INCLUDE) 
 # C warnings

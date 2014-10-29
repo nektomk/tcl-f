@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "iter.h"
+#include "tuple.h"
 
 #include "debug.h"
 #include "inspect.h"

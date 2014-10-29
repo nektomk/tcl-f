@@ -1,5 +1,5 @@
 #include <tcl.h>
-#include <debug.h>
+#include "debug.h"
 
 #include "cons.h"
 

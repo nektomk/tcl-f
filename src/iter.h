@@ -2,7 +2,7 @@
 #define ITER_H 1
 
 #include <tcl.h>
-#include <tuple.h>
+#include "tuple.h"
 /** простой итератор для перебора элементов чего-то там
     пока поддерживаются только list и tuple (todo: dict)
 **/

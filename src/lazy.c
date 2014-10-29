@@ -161,16 +161,6 @@ Tcl_ObjType const lazyTypeD = {
 };
 const Tcl_ObjType *lazyType=&lazyTypeD;
 
-static void onInterpDelete(ClientData data,Tcl_Interp *interp) {
-    ERR("Interp delete - create last-resort for lazy");
-    (void)data;
-    (void)interp;
-    if (lazyLastResort==NULL) {
-        lazyLastResort=Tcl_CreateInterp();
-        Tcl_Eval(lazyLastResort,"package require f");
-        Tcl_Eval(lazyLastResort,"namespace import ::f::*");
-    }
-}
 
 int initLazySubsys(Tcl_Interp *interp) {
     (void)interp;
