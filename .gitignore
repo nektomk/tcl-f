@@ -1,3 +1,6 @@
 *.komodoproject
 test.tcl
-test.tcl
+*.o
+*.a
+*.dll
+*.so
