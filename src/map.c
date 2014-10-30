@@ -22,7 +22,7 @@ typedef struct IteratorState {
 	Tcl_Obj *funcObj;	// а эта функция над ними исполняется
 	
 	Tcl_Obj *ret;	// и тут собираются результаты
-
+	int mode;	// "режим" работы: 0-map, 1-filter ,2-fold
 } IteratorState;
 
 unsigned long nextId=0;
@@ -62,10 +62,25 @@ int mapNreStep(ClientData data[],Tcl_Interp *interp,int code)
 	}
 	result=Tcl_GetObjResult(interp);
 	if (code==TCL_OK) {
-		tupleObjPut(st->ret,result);
+		if (st->mode==1) {
+			// filter
+			int yes;
+			if (Tcl_GetBooleanFromObj(interp,result,&yes)==TCL_OK && yes) 
+				tupleObjPut(st->ret,iterCurr(st->it));
+		} else if (st->mode==2) {
+			// fold
+			tupleObjClear(st->ret);
+			tupleObjPut(st->ret,result);
+		} else {
+			// map
+			tupleObjPut(st->ret,result);
+		}
 	}
 	if (code==TCL_OK && (arg=iterNext(st->it))!=NULL) {
 		Tcl_NRAddCallback(interp,mapNreStep,NULL,NULL,NULL,NULL);
+		if (st->mode==2) {
+			return funcObjCallVA(interp,st->funcObj,st->ret,arg,NULL);
+		}
 		return funcObjCallVA(interp,st->funcObj,arg,NULL);
 	}
 	if (code==TCL_OK || code==TCL_RETURN) {
@@ -79,14 +94,22 @@ int
 mapNreProc(ClientData data,Tcl_Interp *interp,int objc,Tcl_Obj *const objv[])
 {
 	register IteratorState *st;	// состояние итератора
-
-	(void)data;
+	int mode;
+	int minObjc;
+	switch((int)data) {
+		case 1 : mode=1;minObjc=2;break;
+		case 2 : mode=2;minObjc=3;break;
+		default: mode=0;minObjc=2;break;
+	}
 	//// АНАЛИЗ АРГУМЕНТОВ
-	if (objc==1) {
-		Tcl_WrongNumArgs(interp,objc,objv,"?function..? tail");
+	if (objc<minObjc) {
+		if (mode==2)
+			Tcl_WrongNumArgs(interp,objc,objv,"?function..? acc tail");
+		else
+			Tcl_WrongNumArgs(interp,objc,objv,"?function..? tail");
 		return TCL_ERROR;
 	}
-	if (objc==2) {
+	if (objc==minObjc) {
 		// не заданна функция - надо вернуть аргумент в виде tuple
 		if (objv[1]->typePtr==tupleType) {
 			Tcl_SetObjResult(interp,tupleRemoveNulls(objv[1]));
@@ -103,6 +126,7 @@ mapNreProc(ClientData data,Tcl_Interp *interp,int objc,Tcl_Obj *const objv[])
 	}
 	// создание итератора
 	st=statePush(interp);
+	st->mode=mode;
 	st->it=iterNew(interp,objv[objc-1],0);	// maybe static?
 	if (iterEmpty(st->it)) {
 		iterFree(st->it);
@@ -112,7 +136,13 @@ mapNreProc(ClientData data,Tcl_Interp *interp,int objc,Tcl_Obj *const objv[])
 	st->arg=objv[objc-1];
 	Tcl_IncrRefCount(st->arg);
 	// создание исполняемой функции
-	st->funcObj=funcObjFromArgs(interp,objc-2,objv+1);
+	if (mode!=2) {
+		// map,filter
+		st->funcObj=funcObjFromArgs(interp,objc-2,objv+1);
+	} else {
+		// fold
+		st->funcObj=funcObjFromArgs(interp,objc-3,objv+1);
+	}
 	if (st->funcObj==NULL) {
 		goto ERROR;
 	}
@@ -121,9 +151,12 @@ mapNreProc(ClientData data,Tcl_Interp *interp,int objc,Tcl_Obj *const objv[])
 	st->ret=tupleObjNew();	// тут собираем результаты
 	Tcl_IncrRefCount(st->ret);
 	// поместить очередной (первый) элемент в конец cmdLine
-	
 	// исполняем
 	Tcl_NRAddCallback(interp,mapNreStep,NULL,NULL,NULL,NULL);
+	if (mode==2) {
+		// fold
+		return funcObjCallVA(interp,st->funcObj,objv[objc-2],iterFirst(st->it),NULL);
+	}
 	return funcObjCallVA(interp,st->funcObj,iterFirst(st->it),NULL);
 ERROR:
 	statePop(interp);

@@ -93,8 +93,10 @@ F_Init(Tcl_Interp *interp)
     Tcl_CreateObjCommand(interp,"::f::lazy",lazyObjProc,NULL,NULL);
     // Nre
     Tcl_NRCreateCommand(interp,"::f::map",mapNreProc,mapObjProc,NULL,NULL);
+    Tcl_NRCreateCommand(interp,"::f::filter",mapNreProc,mapObjProc,(void *)1,NULL);
     Tcl_NRCreateCommand(interp,"::f::chain",chainNreProc,chainObjProc,NULL,NULL);
     Tcl_NRCreateCommand(interp,"::f::call",callNreProc,callObjProc,NULL,NULL);
+    Tcl_NRCreateCommand(interp,"::f::unlazy",unlazyNreProc,unlazyObjProc,NULL,NULL);
     
     return TCL_OK;
 }

@@ -37,6 +37,7 @@ void tupleObjPut(Tcl_Obj *tupleObj,Tcl_Obj *);   // добавить объек�
 int tupleObjUnget(Tcl_Obj *tupleObj,Tcl_Obj *);  // добавить объект в начало набора
 #define tupleObjPush(tupleObj,obj) tupleObjUnget((tupleObj),(obj))
 
+void tupleObjClear(Tcl_Obj *tupleObj);
 // methods :-)
 int tupleObjIsEmpty(Tcl_Obj *); // no not-null elements
 Cons *tupleObjRest(Tcl_Obj *);  // second not-null element

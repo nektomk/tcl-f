@@ -40,7 +40,7 @@ $(TARGET).$(DLLSO): $(OBJS)
 dist: $(TARGET).$(DLLSO)
 		cp -f $(TARGET).$(DLLSO) $(DISTDIR)
 
-.PHONY: clean distclean touch test test-func test-lazy test-tuple test-call test-chain test-map
+.PHONY: clean distclean touch test test-func test-lazy test-tuple test-call test-chain test-map test-filter test-fold
 
 clean:
 		$(RM) *.o
@@ -76,3 +76,8 @@ test-chain:
 test-map:
 		cd test;tclsh all.tcl -match map-*
 
+test-filter:
+		cd test;tclsh all.tcl -match filter-*
+
+test-fold:
+		cd test;tclsh all.tcl -match filter-*

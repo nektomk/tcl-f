@@ -197,6 +197,15 @@ tupleRemoveNulls(Tcl_Obj *tupleObj) {
     return tupleObj;
 }
 void
+tupleObjClear(Tcl_Obj *tupleObj)
+{
+    SHOULD(tupleObj!=NULL,return);
+    SHOULD(tupleObj->typePtr==tupleType,return);
+    
+    consFree(TUPLE(tupleObj)->head,NULL);
+    TUPLE(tupleObj)->head=TUPLE(tupleObj)->tail=NULL;    
+}
+void
 consExpand(Cons *cons) {
     Cons *head,*tail; 
     if (cons==NULL) return;
