@@ -1,10 +1,10 @@
-OBJS=tclf.o map.o inspect.o tuple.o cons.o lazy.o iter.o func.o call.o chain.o
-TARGET=tclf
+OBJS=f.o map.o inspect.o tuple.o cons.o lazy.o iter.o func.o call.o chain.o
+TARGET=f
 DISTDIR=./f
 
 #INCLUDE=-Isrc
 
-CFLAGS=$(INCLUDE) 
+CFLAGS=$(TCL_INCLUDE_SPEC) -Iinclude
 # C warnings
 CFLAGS+=-Wall -Wextra  -Wno-strict-aliasing 
 # optimization flags
@@ -16,12 +16,14 @@ CFLAGS+=-DUSE_TCL_STUBS=1
 SYS := $(shell gcc -dumpmachine)
 ifneq (, $(findstring mingw, $(SYS)))
  # Do Mingw
+TCL_CONFIG=C:/MinGW/lib/tclConfig.sh
+include $(TCL_CONFIG)
 MINGW=C:/MinGW
 DLLSO=dll
 LD=gcc
 STUB=$(MINGW)/lib/libtclstub86.a
 %.dll : %.o
-		$(LD) $(LDFLAGS) -shared -fPIC -o $@ $^ $(LDLIBS) $(STUB) -static-libgcc
+		$(LD) $(LDFLAGS) -shared -fPIC -o $@ $^ $(LDLIBS) $(TCL_STUB_LIB_PATH) -static-libgcc
 endif
 ifneq (, $(findstring linux, $(SYS)))
 endif 
@@ -31,11 +33,9 @@ endif
 
 VPATH=src
 
-all: tclf.$(DLLSO)
+all: $(TARGET).$(DLLSO) 
 
 $(TARGET).$(DLLSO): $(OBJS)
-
-func.dll: func.o
 
 dist: $(TARGET).$(DLLSO)
 		cp -f $(TARGET).$(DLLSO) $(DISTDIR)

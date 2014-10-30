@@ -72,6 +72,7 @@ static struct CommandEntry {
 	{ NS,"tuple", EXPORT,tupleObjProc,NULL,&tupleCmdName,&tupleCmdToken,NULL,NULL },
 	{ NS,"stateid",EXPORT,stateidObjProc,NULL,NULL,NULL,NULL,NULL },
 	{ NS,"lazy",EXPORT,lazyObjProc,NULL,NULL,NULL,NULL,NULL},
+	{ NS,"unlazy",EXPORT,unlazyObjProc,unlazyNreProc,NULL,NULL,NULL,NULL},
 	{ NS,"inspect",EXPORT,inspectObjProc,NULL,NULL,NULL,NULL,NULL},
 	{ 0 }
 }, resolveTable[] = {
@@ -283,6 +284,9 @@ Tclf_Init(Tcl_Interp *interp)
 		return TCL_ERROR;
 	}
 	if (initFuncInstance(interp,packageNamespace)!=TCL_OK)
+		return TCL_ERROR;
+	
+	if (initLazyInstance(interp,packageNamespace)!=TCL_OK)
 		return TCL_ERROR;
 	return TCL_OK;
 }

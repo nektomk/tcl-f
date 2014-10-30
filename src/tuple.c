@@ -20,6 +20,7 @@ static Tcl_ObjType tupleTypeD = {
     tupleObjUpdateString,
     tupleObjSetFromAny
 };
+const Tcl_ObjType *tupleType=&tupleTypeD;
 
 void consExpand(Cons *cons);
 

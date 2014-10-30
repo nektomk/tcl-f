@@ -10,6 +10,7 @@
 
 #include "tuple.h"
 
+const char *stateKey="::f::state";
 /** 
 */
 typedef struct IteratorState {

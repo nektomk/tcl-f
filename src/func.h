@@ -50,8 +50,8 @@ int funcObjCurry(Tcl_Interp *,Tcl_Obj *funcObj,int objc,Tcl_Obj *const objv[]);
 //int funcObjCall(Tcl_Interp *,Tcl_Obj *funcObj,int objc,Tcl_Obj *const objv[]);
 
 //// регистрируемые команды Tcl
-//int funcObjProc(ClientData,Tcl_Interp *,int objc,Tcl_Obj *const objv[]);        // создание функции ```func args```
-//int callFuncObjProc(ClientData,Tcl_Interp *,int objc,Tcl_Obj *const objv[]);    // вызов/исполнение функции ```call funcObj args``` 
+int funcObjProc(ClientData,Tcl_Interp *,int objc,Tcl_Obj *const objv[]);        // создание функции ```func args```
+int callFuncObjProc(ClientData,Tcl_Interp *,int objc,Tcl_Obj *const objv[]);    // вызов/исполнение функции ```call funcObj args``` 
 
 #endif
 

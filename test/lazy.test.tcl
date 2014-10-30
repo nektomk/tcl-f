@@ -1,50 +1,48 @@
-package require tcltest
 package require f
 namespace import f::*
-
-tcltest::test lazy-withot-args "lazy command w/o args" -body {
+source testcase.tcl
+set setup {
+	package require f
+	namespace import ::f::*
+}
+testcase lazy-withot-args "lazy command w/o args" -body {
    set x [lazy]
-} -returnCodes error -match glob -result *
+} -returnCodes error -match glob -result * -setup $setup
 
-tcltest::test lazy-with-args "lazy command with args" -body {
+testcase lazy-with-args "lazy command with args" -body {
    lazy expr 1 + 2
-} -result 3 -returnCodes ok
+} -result 3 -setup $setup
 
-tcltest::test lazy-var "lazy to variable" -body {
+testcase lazy-var "lazy to variable" -body {
    set x [ lazy expr 1 + 2 ]
-   list
-} -returnCodes ok -result {}
+} -result 3 -setup $setup
 
-tcltest::test lazy-subst "lazy substitution" -body {
-   set x [ lazy {puts "hello"
+testcase lazy-subst "lazy substitution" -body {
+   set x [ lazy eval {
 	list 1} ]
    set y "x$x"
-} -output {hello}  -constraints {winCrash}
+} -result "x1" -setup $setup
+#-constraints {winCrash}
    
-tcltest::test lazy-once "lazy only once" -body {
-   set x [ lazy {
-      puts -nonewline "hello"
-      list 1 2
-   } ]
-   puts [ concat $x $x ]
-} -output {hello 1 2 1 2}
+testcase lazy-once "lazy only once" -body {
+   set x [ lazy list 1 2 ]
+   puts -nonewline [ concat $x $x ]
+} -output {1 2 1 2} -setup $setup
 
-tcltest::test lazy-copy "one lazy in mult. vars" -body {
-   set x [ lazy {
-      puts -nonewline "hello"
+testcase lazy-copy "one lazy in mult. vars" -body {
+   set x [ lazy eval {
       list 1 2
    } ]
    set y $x
    set z $y
-   puts [ concat $x $y $z ]
-   
-} -result {1 2 1 2 1 2} -output {hello}
+   concat $x $y $z
+} -result {1 2 1 2 1 2} -setup $setup
 
-tcltest::test lazy-lazy "multiple nested lazy`es" -body {
-   set x [ lazy lazy lazy {
+testcase lazy-lazy "multiple nested lazy`es" -body {
+   set x [ lazy lazy lazy eval {
       list 1 2 3 4
    } ]
-} -result {1 2 3 4}
+} -result {1 2 3 4} -setup $setup
 
 
 
